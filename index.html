@@ -17,7 +17,7 @@
         .challenge-card { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 5; will-change: transform, opacity; }
         .card-emoji { font-size: 5.5rem; }
         .card-word { background: #ffcc00; color: #333; font-size: 2rem; font-weight: bold; padding: 6px 20px; border-radius: 12px; border: 2px solid #fff; margin-top: 5px; }
-        .card-approach { animation: cardRush 5s linear forwards; }
+        .card-approach { animation: cardRush 6s linear forwards; }
         .card-fallback { transition: transform 0.4s ease-in, opacity 0.4s; transform: translateX(-50%) scale(0.1) translateY(-320px) !important; opacity: 0.3; }
         .bottom-area { padding: 20px; text-align: center; background: rgba(0,0,0,0.4); z-index: 10; }
         .btn-start { background-color: #00f3ff; color: #1a1a2e; font-size: 1.4rem; font-weight: bold; border: none; padding: 12px 35px; border-radius: 25px; cursor: pointer; }
@@ -49,148 +49,17 @@
         </div>
     </div>
     <script>
-        const wordList = [
-            { word: 'apple', emoji: '🍎' },
-            { word: 'banana', emoji: '🍌' },
-            { word: 'lion', emoji: '🦁' },
-            { word: 'tiger', emoji: '🐯' },
-            { word: 'elephant', emoji: '🐘' }
-        ];
+        const wordList = [{ word: 'apple', emoji: '🍎' }, { word: 'banana', emoji: '🍌' }, { word: 'lion', emoji: '🦁' }, { word: 'tiger', emoji: '🐯' }, { word: 'elephant', emoji: '🐘' }];
         let currentIdx = 0, score = 0, isPlaying = false, recognition = null, audioCtx = null;
-
-        const actionBtn = document.getElementById('action-btn');
-        const subtitleTxt = document.getElementById('subtitle');
-        const wordTxt = document.getElementById('word');
-        const emojiTxt = document.getElementById('emoji');
-        const levelTxt = document.getElementById('level-num');
-        const scoreTxt = document.getElementById('score-num');
-        const challengeCard = document.getElementById('challenge-card');
-
-        challengeCard.onanimationend = function() {
-            if (isPlaying) handleWrongAnswer();
-        };
-
-        function playSound(type) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            if (type === 'correct') {
-                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
-                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); 
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
-            } else {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(220, audioCtx.currentTime); 
-                osc.frequency.setValueAtTime(146, audioCtx.currentTime + 0.1); 
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-            }
-        }
-
-        function initSpeechEngine() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                subtitleTxt.innerText = '瀏覽器不支援語音辨識，請用 Chrome！';
-                return false;
-            }
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = true;
-            recognition.continuous = true;
-
-            recognition.onstart = function() {
-                subtitleTxt.innerText = '🎤 語音全面同步，請大聲唸出單字！';
-            };
-            recognition.onresult = function(event) {
-                if (!isPlaying) return;
-                let text = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    text += event.results[i].transcript;
-                }
-                let clean = text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
-                if (clean) {
-                    subtitleTxt.innerText = '🗣️ 聽到聲音: "' + clean + '"';
-                    if (clean.includes(wordList[currentIdx].word)) handleCorrectAnswer();
-                }
-            };
-            recognition.onend = function() {
-                if (isPlaying) { try { recognition.start(); } catch(e) {} }
-            };
-            return true;
-        }
-
-        function toggleGame() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (!recognition && !initSpeechEngine()) return;
-            if (isPlaying) {
-                isPlaying = false;
-                actionBtn.innerText = 'START 挑戰開始';
-                actionBtn.classList.remove('active');
-                subtitleTxt.innerText = '遊戲已暫停';
-                challengeCard.classList.remove('card-approach');
-                recognition.stop();
-            } else {
-                isPlaying = true;
-                actionBtn.innerText = '聆聽中... (點擊暫停)';
-                actionBtn.classList.add('active');
-                currentIdx = 0; score = 0;
-                scoreTxt.innerText = '得分: 0 分';
-                updateCardUI();
-                recognition.start();
-            }
-        }
-
-        function handleCorrectAnswer() {
-            playSound('correct');
-            score += 20;
-            scoreTxt.innerText = '得分: ' + score + ' 分';
-            subtitleTxt.innerText = '🎉 答對了！撞碎單字牆！';
-            challengeCard.classList.remove('card-approach');
-            isPlaying = false;
-            setTimeout(function() {
-                currentIdx++;
-                if (currentIdx < wordList.length) {
-                    isPlaying = true;
-                    updateCardUI();
-                } else {
-                    displayVictory();
-                }
-            }, 1000);
-        }
-
-        function handleWrongAnswer() {
-            playSound('wrong');
-            subtitleTxt.innerText = '❌ 失敗！題目退回山頂重新衝過來！';
-            isPlaying = false; 
-            challengeCard.classList.remove('card-approach');
-            challengeCard.classList.add('card-fallback');
-            setTimeout(function() {
-                challengeCard.classList.remove('card-fallback');
-                isPlaying = true; 
-                updateCardUI();
-            }, 400);
-        }
-
-        function updateCardUI() {
-            levelTxt.innerText = '關卡: ' + (currentIdx + 1) + ' / ' + wordList.length;
-            wordTxt.innerText = wordList[currentIdx].word;
-            emojiTxt.innerText = wordList[currentIdx].emoji;
-            challengeCard.classList.remove('card-approach');
-            void challengeCard.offsetWidth;
-            challengeCard.classList.add('card-approach');
-        }
-
-        function displayVictory() {
-            isPlaying = false;
-            if (recognition) recognition.stop();
-            emojiTxt.innerText = '🏆';
-            wordTxt.innerText = '全通關！';
-            subtitleTxt.innerText = '🔥 太厲害了！你完成了英文濾鏡挑戰！';
-            actionBtn.style.display = 'none';
-        }
-
+        const actionBtn = document.getElementById('action-btn'), subtitleTxt = document.getElementById('subtitle'), wordTxt = document.getElementById('word'), emojiTxt = document.getElementById('emoji'), levelTxt = document.getElementById('level-num'), scoreTxt = document.getElementById('score-num'), challengeCard = document.getElementById('challenge-card');
+        challengeCard.onanimationend = function() { if (isPlaying) handleWrongAnswer(); };
+        function playSound(type) { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); if (type === 'correct') { osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.25); } else { osc.type = 'triangle'; osc.frequency.setValueAtTime(220, audioCtx.currentTime); osc.frequency.setValueAtTime(146, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } }
+        function initSpeechEngine() { const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SpeechRecognition) { subtitleTxt.innerText = '瀏覽器不支援語音辨識，請用 Chrome！'; return false; } recognition = new SpeechRecognition(); recognition.lang = 'en-US'; recognition.interimResults = false; recognition.continuous = false; recognition.onstart = function() { if (isPlaying) subtitleTxt.innerText = '🎤 正在聆聽中，請大聲讀出單字...'; }; recognition.onresult = function(event) { if (!isPlaying) return; let userSpeech = event.results[0][0].transcript; let clean = userSpeech.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,''); if (clean) { subtitleTxt.innerText = '🗣️ 聽到聲音: "' + clean + '"'; if (clean.includes(wordList[currentIdx].word.toLowerCase())) handleCorrectAnswer(); } }; recognition.onend = function() { if (isPlaying) { setTimeout(function() { try { recognition.start(); } catch(e) {} }, 50); } }; recognition.onerror = function(event) { console.log('Engine Error:', event.error); }; return true; }
+        function toggleGame() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (!recognition && !initSpeechEngine()) return; if (isPlaying) { isPlaying = false; actionBtn.innerText = 'START 挑戰開始'; actionBtn.classList.remove('active'); subtitleTxt.innerText = '遊戲已暫停'; challengeCard.classList.remove('card-approach'); recognition.stop(); } else { isPlaying = true; actionBtn.innerText = '聆聽中... (點擊暫停)'; actionBtn.classList.add('active'); currentIdx = 0; score = 0; scoreTxt.innerText = '得分: 0 分'; updateCardUI(); try { recognition.start(); } catch(e) {} } }
+        function handleCorrectAnswer() { playSound('correct'); score += 20; scoreTxt.innerText = '得分: ' + score + ' 分'; subtitleTxt.innerText = '🎉 答對了！撞碎單字牆！'; challengeCard.classList.remove('card-approach'); isPlaying = false; if (recognition) recognition.stop(); setTimeout(function() { currentIdx++; if (currentIdx < wordList.length) { isPlaying = true; updateCardUI(); try { recognition.start(); } catch(e) {} } else { displayVictory(); } }, 1200); }
+        function handleWrongAnswer() { playSound('wrong'); subtitleTxt.innerText = '❌ 失敗！題目退回山頂重新衝過來！'; isPlaying = false; if (recognition) recognition.stop(); challengeCard.classList.remove('card-approach'); challengeCard.classList.add('card-fallback'); setTimeout(function() { challengeCard.classList.remove('card-fallback'); isPlaying = true; updateCardUI(); try { recognition.start(); } catch(e) {} }, 400); }
+        function updateCardUI() { levelTxt.innerText = '關卡: ' + (currentIdx + 1) + ' / ' + wordList.length; wordTxt.innerText = wordList[currentIdx].word; emojiTxt.innerText = wordList[currentIdx].emoji; challengeCard.classList.remove('card-approach'); void challengeCard.offsetWidth; challengeCard.classList.add('card-approach'); }
+        function displayVictory() { isPlaying = false; if (recognition) recognition.stop(); emojiTxt.innerText = '🏆'; wordTxt.innerText = '全通關！'; subtitleTxt.innerText = '🔥 太厲害了！你完成了英文濾鏡挑戰！'; actionBtn.style.display = 'none'; }
         updateCardUI();
     </script>
 </body>
