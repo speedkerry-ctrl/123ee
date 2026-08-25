@@ -103,13 +103,13 @@
     <div class='game-container'>
         <div class='header-info'>
             <span id='level-num'>關卡: 1 / 5</span>
-            <span id="score-num">得分: 0 分</span>
+            <span id='score-num'>得分: 0 分</span>
         </div>
         <div class='emoji-container'>
             <div id='emoji' class='emoji-display approach-animation'>🍎</div>
         </div>
         <div id='word' class='word-display'>apple</div>
-        <div id='hint' class='hint-text'>請大聲唸出單字，系統每 2 秒自動對答案！</div>
+        <div id='hint' class='hint-text'>請大聲唸出單字，系統會自動在2秒內比對！</div>
         <button id='mic-btn' class='btn-mic' onclick='toggleListening()'>🎤</button>
         <div id='status' class='status-msg info'>點擊麥克風開始闖關</div>
         <div id='transcript' class='transcript-box'></div>
@@ -126,8 +126,7 @@
         let score = 0;
         let isListening = false;
         let recognition;
-        let resetTimer = null;   
-        let lastTranscript = ''; 
+        let checkTimer = null;   
 
         const micBtn = document.getElementById('mic-btn');
         const statusTxt = document.getElementById('status');
@@ -145,38 +144,48 @@
             }
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.interimResults = true; 
-            recognition.continuous = true;     
+            recognition.interimResults = false; 
+            recognition.continuous = false; // 改為穩定且靈敏的單次錄音機制
+
             recognition.onstart = () => {
                 isListening = true;
                 micBtn.classList.add('listening');
-                statusTxt.innerHTML = "<span class='info'>系統開啟中...請開始發音...</span>";
-                startResetLoop(); 
+                statusTxt.innerHTML = "<span class='info'>正在聆聽...請清晰地讀出單字...</span>";
             };
+
             recognition.onresult = (event) => {
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        lastTranscript = event.results[i].transcript;
+                let userSpeech = event.results[0][0].transcript.toLowerCase().trim();
+                userSpeech = userSpeech.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
+                
+                transcriptTxt.innerText = '聽到的是: ' + userSpeech;
+                
+                // 收到語音輸入後，設定2秒內自動完成答案對決比對
+                clearTimeout(checkTimer);
+                statusTxt.innerHTML = "<span class='info'>正在比對答案中...</span>";
+                
+                checkTimer = setTimeout(() => {
+                    const targetWord = wordList[currentIdx].word.toLowerCase();
+                    if (userSpeech.includes(targetWord)) {
+                        handleCorrectAnswer();
                     } else {
-                        interimTranscript += event.results[i].transcript;
+                        handleWrongAnswer();
                     }
-                }
-                let currentSpeech = (lastTranscript || interimTranscript).toLowerCase().trim();
-                currentSpeech = currentSpeech.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
-                if (currentSpeech) {
-                    transcriptTxt.innerText = '聽到的是: ' + currentSpeech;
-                    lastTranscript = currentSpeech; 
-                }
+                }, 400); 
             };
+
             recognition.onerror = (event) => {
+                console.log('辨識異常:', event.error);
                 if (event.error === 'not-allowed') {
-                    statusTxt.innerHTML = "<span class='error'>請允許瀏覽器使用麥克風權限！</span>";
+                    statusTxt.innerHTML = "<span class='error'>請點網址旁鎖頭允許麥克風權限！</span>";
                     stopListening();
                 }
             };
+
+            // 核心：一但偵測斷開，只要沒手動點關閉，就秒速重新啟動，維持永續錄音
             recognition.onend = () => {
-                if (isListening) recognition.start();
+                if (isListening) {
+                    try { recognition.start(); } catch(e) {}
+                }
             };
             return true;
         }
@@ -187,7 +196,7 @@
                 stopListening();
                 statusTxt.innerHTML = "<span class='info'>語音功能已暫停</span>";
             } else {
-                lastTranscript = '';
+                transcriptTxt.innerText = '';
                 recognition.start();
             }
         }
@@ -195,24 +204,8 @@
         function stopListening() {
             isListening = false;
             micBtn.classList.remove('listening');
-            clearInterval(resetTimer);
+            clearTimeout(checkTimer);
             if (recognition) recognition.stop();
-        }
-
-        function startResetLoop() {
-            clearInterval(resetTimer);
-            resetTimer = setInterval(() => {
-                if (!isListening) return;
-                const targetWord = wordList[currentIdx].word.toLowerCase();
-                if (lastTranscript !== '') {
-                    if (lastTranscript.includes(targetWord)) {
-                        handleCorrectAnswer();
-                    } else {
-                        handleWrongAnswer();
-                    }
-                }
-                lastTranscript = ''; 
-            }, 2000);
         }
 
         function handleCorrectAnswer() {
@@ -226,7 +219,7 @@
                 currentIdx++;
                 if (currentIdx < wordList.length) {
                     updateLevelUI();
-                    recognition.start(); 
+                    toggleListening(); 
                 } else {
                     displayGameFinished();
                 }
