@@ -3,116 +3,50 @@
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>英文發音大闖關</title>
+    <title>English Challenge</title>
     <style>
-        body {
-            font-family: sans-serif;
-            background-color: #eef7ff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow: hidden;
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; background-color: #1a1a2e; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        .phone-canvas { background: linear-gradient(to bottom, #4a00e0, #8e2de2); width: 100%; max-width: 430px; height: 92vh; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        .top-hud { display: flex; justify-content: space-between; padding: 20px; font-size: 1.2rem; font-weight: bold; background: rgba(0, 0, 0, 0.3); z-index: 10; }
+        .speech-subtitle { position: absolute; top: 75px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 8px 16px; border-radius: 20px; font-size: 1rem; max-width: 85%; text-align: center; border: 1px solid #00f3ff; color: #00f3ff; z-index: 10; }
+        .stage-3d { flex: 1; position: relative; perspective: 300px; }
+        .runway { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) rotateX(45deg); transform-origin: bottom center; width: 180px; height: 85%; background: #3a3a52; border-left: 6px solid #ff4757; border-right: 6px solid #ff4757; }
+        .runway::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; border-left: 4px dashed #ffffff; }
+        .finish-barrier { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); width: 240px; height: 6px; background: #00f3ff; box-shadow: 0 0 10px #00f3ff; z-index: 2; }
+        .challenge-card { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 5; will-change: transform, opacity; }
+        .card-emoji { font-size: 5.5rem; }
+        .card-word { background: #ffcc00; color: #333; font-size: 2rem; font-weight: bold; padding: 6px 20px; border-radius: 12px; border: 2px solid #fff; margin-top: 5px; }
+        .card-approach { animation: cardRush 5s linear forwards; }
+        .card-fallback { transition: transform 0.4s ease-in, opacity 0.4s; transform: translateX(-50%) scale(0.1) translateY(-320px) !important; opacity: 0.3; }
+        .bottom-area { padding: 20px; text-align: center; background: rgba(0,0,0,0.4); z-index: 10; }
+        .btn-start { background-color: #00f3ff; color: #1a1a2e; font-size: 1.4rem; font-weight: bold; border: none; padding: 12px 35px; border-radius: 25px; cursor: pointer; }
+        .btn-start.active { background-color: #2ed573; color: white; }
+        @keyframes cardRush {
+            0% { transform: translateX(-50%) scale(0.1) translateY(-300px); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateX(-50%) scale(1.1) translateY(-10px); opacity: 1; }
         }
-        .game-container {
-            background-color: #ffffff;
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
-            width: 100%;
-            border: 5px solid #ffcb2e;
-        }
-        .header-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #555;
-            margin-bottom: 10px;
-        }
-        .emoji-container {
-            height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 10px 0;
-        }
-        .emoji-display {
-            font-size: 8rem;
-            transition: transform 0.4s ease-out;
-        }
-        .approach-animation {
-            animation: comeCloser 5s linear forwards;
-        }
-        .word-display {
-            font-size: 3.5rem;
-            font-weight: bold;
-            color: #2b579a;
-            margin-bottom: 5px;
-        }
-        .hint-text {
-            font-size: 1.1rem;
-            color: #777;
-            margin-bottom: 15px;
-        }
-        .btn-mic {
-            background-color: #ff4757;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            font-size: 2.2rem;
-            cursor: pointer;
-        }
-        .listening {
-            animation: pulse 1.2s infinite;
-            background-color: #2ed573 !important;
-        }
-        .status-msg {
-            margin-top: 15px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            min-height: 35px;
-        }
-        .transcript-box {
-            margin-top: 5px;
-            font-size: 1.1rem;
-            color: #666;
-            min-height: 25px;
-        }
-        @keyframes comeCloser {
-            0% { transform: scale(0.2); }
-            100% { transform: scale(1.2); }
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-            100% { transform: scale(1); }
-        }
-        .success { color: #2ed573; }
-        .error { color: #ff4757; }
-        .info { color: #ffa500; }
     </style>
 </head>
 <body>
-    <div class='game-container'>
-        <div class='header-info'>
+    <div class='phone-canvas'>
+        <div class='top-hud'>
             <span id='level-num'>關卡: 1 / 5</span>
             <span id='score-num'>得分: 0 分</span>
         </div>
-        <div class='emoji-container'>
-            <div id='emoji' class='emoji-display approach-animation'>🍎</div>
+        <div id='subtitle' class='speech-subtitle'>點擊下方按鈕開始英文挑戰！</div>
+        <div class='stage-3d'>
+            <div class='runway'></div>
+            <div class='finish-barrier'></div>
+            <div id='challenge-card' class='challenge-card'>
+                <div id='emoji' class='card-emoji'>🍎</div>
+                <div id='word' class='card-word'>apple</div>
+            </div>
         </div>
-        <div id='word' class='word-display'>apple</div>
-        <div id='hint' class='hint-text'>請大聲唸出單字，系統會自動在2秒內比對！</div>
-        <button id='mic-btn' class='btn-mic' onclick='toggleListening()'>🎤</button>
-        <div id='status' class='status-msg info'>點擊麥克風開始闖關</div>
-        <div id='transcript' class='transcript-box'></div>
+        <div class='bottom-area'>
+            <button id='action-btn' class='btn-start' onclick='toggleGame()'>START 挑戰開始</button>
+        </div>
     </div>
     <script>
         const wordList = [
@@ -122,144 +56,140 @@
             { word: 'tiger', emoji: '🐯' },
             { word: 'elephant', emoji: '🐘' }
         ];
-        let currentIdx = 0;
-        let score = 0;
-        let isListening = false;
-        let recognition;
-        let checkTimer = null;   
+        let currentIdx = 0, score = 0, isPlaying = false, recognition = null, audioCtx = null;
 
-        const micBtn = document.getElementById('mic-btn');
-        const statusTxt = document.getElementById('status');
-        const transcriptTxt = document.getElementById('transcript');
+        const actionBtn = document.getElementById('action-btn');
+        const subtitleTxt = document.getElementById('subtitle');
         const wordTxt = document.getElementById('word');
         const emojiTxt = document.getElementById('emoji');
         const levelTxt = document.getElementById('level-num');
         const scoreTxt = document.getElementById('score-num');
+        const challengeCard = document.getElementById('challenge-card');
 
-        function initSpeechRecognition() {
+        challengeCard.onanimationend = function() {
+            if (isPlaying) handleWrongAnswer();
+        };
+
+        function playSound(type) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); 
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            } else {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(146, audioCtx.currentTime + 0.1); 
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        function initSpeechEngine() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                statusTxt.innerHTML = "<span class='error'>瀏覽器不支援語音辨識，請使用 Chrome。</span>";
+                subtitleTxt.innerText = '瀏覽器不支援語音辨識，請用 Chrome！';
                 return false;
             }
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.interimResults = false; 
-            recognition.continuous = false; // 改為穩定且靈敏的單次錄音機制
+            recognition.interimResults = true;
+            recognition.continuous = true;
 
-            recognition.onstart = () => {
-                isListening = true;
-                micBtn.classList.add('listening');
-                statusTxt.innerHTML = "<span class='info'>正在聆聽...請清晰地讀出單字...</span>";
+            recognition.onstart = function() {
+                subtitleTxt.innerText = '🎤 語音全面同步，請大聲唸出單字！';
             };
-
-            recognition.onresult = (event) => {
-                let userSpeech = event.results[0][0].transcript.toLowerCase().trim();
-                userSpeech = userSpeech.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
-                
-                transcriptTxt.innerText = '聽到的是: ' + userSpeech;
-                
-                // 收到語音輸入後，設定2秒內自動完成答案對決比對
-                clearTimeout(checkTimer);
-                statusTxt.innerHTML = "<span class='info'>正在比對答案中...</span>";
-                
-                checkTimer = setTimeout(() => {
-                    const targetWord = wordList[currentIdx].word.toLowerCase();
-                    if (userSpeech.includes(targetWord)) {
-                        handleCorrectAnswer();
-                    } else {
-                        handleWrongAnswer();
-                    }
-                }, 400); 
-            };
-
-            recognition.onerror = (event) => {
-                console.log('辨識異常:', event.error);
-                if (event.error === 'not-allowed') {
-                    statusTxt.innerHTML = "<span class='error'>請點網址旁鎖頭允許麥克風權限！</span>";
-                    stopListening();
+            recognition.onresult = function(event) {
+                if (!isPlaying) return;
+                let text = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    text += event.results[i].transcript;
+                }
+                let clean = text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
+                if (clean) {
+                    subtitleTxt.innerText = '🗣️ 聽到聲音: "' + clean + '"';
+                    if (clean.includes(wordList[currentIdx].word)) handleCorrectAnswer();
                 }
             };
-
-            // 核心：一但偵測斷開，只要沒手動點關閉，就秒速重新啟動，維持永續錄音
-            recognition.onend = () => {
-                if (isListening) {
-                    try { recognition.start(); } catch(e) {}
-                }
+            recognition.onend = function() {
+                if (isPlaying) { try { recognition.start(); } catch(e) {} }
             };
             return true;
         }
 
-        function toggleListening() {
-            if (!recognition && !initSpeechRecognition()) return;
-            if (isListening) {
-                stopListening();
-                statusTxt.innerHTML = "<span class='info'>語音功能已暫停</span>";
+        function toggleGame() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!recognition && !initSpeechEngine()) return;
+            if (isPlaying) {
+                isPlaying = false;
+                actionBtn.innerText = 'START 挑戰開始';
+                actionBtn.classList.remove('active');
+                subtitleTxt.innerText = '遊戲已暫停';
+                challengeCard.classList.remove('card-approach');
+                recognition.stop();
             } else {
-                transcriptTxt.innerText = '';
+                isPlaying = true;
+                actionBtn.innerText = '聆聽中... (點擊暫停)';
+                actionBtn.classList.add('active');
+                currentIdx = 0; score = 0;
+                scoreTxt.innerText = '得分: 0 分';
+                updateCardUI();
                 recognition.start();
             }
         }
 
-        function stopListening() {
-            isListening = false;
-            micBtn.classList.remove('listening');
-            clearTimeout(checkTimer);
-            if (recognition) recognition.stop();
-        }
-
         function handleCorrectAnswer() {
+            playSound('correct');
             score += 20;
             scoreTxt.innerText = '得分: ' + score + ' 分';
-            statusTxt.innerHTML = "<span class='success'>🎉 太棒了！念對了！</span>";
-            emojiTxt.classList.remove('approach-animation');
-            emojiTxt.style.transform = 'scale(1.4)';
-            stopListening();
-            setTimeout(() => {
+            subtitleTxt.innerText = '🎉 答對了！撞碎單字牆！';
+            challengeCard.classList.remove('card-approach');
+            isPlaying = false;
+            setTimeout(function() {
                 currentIdx++;
                 if (currentIdx < wordList.length) {
-                    updateLevelUI();
-                    toggleListening(); 
+                    isPlaying = true;
+                    updateCardUI();
                 } else {
-                    displayGameFinished();
+                    displayVictory();
                 }
-            }, 1500);
+            }, 1000);
         }
 
         function handleWrongAnswer() {
-            statusTxt.innerHTML = "<span class='error'>❌ 發音不對哦！退後再試一次！</span>";
-            emojiTxt.classList.remove('approach-animation');
-            emojiTxt.style.transform = 'scale(0.2)';
-            setTimeout(() => {
-                emojiTxt.style.transform = 'scale(1)'; 
-                emojiTxt.classList.add('approach-animation');
-            }, 50);
+            playSound('wrong');
+            subtitleTxt.innerText = '❌ 失敗！題目退回山頂重新衝過來！';
+            challengeCard.classList.remove('card-approach');
+            challengeCard.classList.add('card-fallback');
+            setTimeout(function() {
+                challengeCard.classList.remove('card-fallback');
+                updateCardUI();
+            }, 400);
         }
 
-        function updateLevelUI() {
+        function updateCardUI() {
             levelTxt.innerText = '關卡: ' + (currentIdx + 1) + ' / ' + wordList.length;
             wordTxt.innerText = wordList[currentIdx].word;
             emojiTxt.innerText = wordList[currentIdx].emoji;
-            transcriptTxt.innerText = '';
-            emojiTxt.classList.remove('approach-animation');
-            emojiTxt.style.transform = 'scale(1)';
-            setTimeout(() => {
-                emojiTxt.classList.add('approach-animation');
-            }, 50);
+            challengeCard.classList.remove('card-approach');
+            void challengeCard.offsetWidth;
+            challengeCard.classList.add('card-approach');
         }
 
-        function displayGameFinished() {
+        function displayVictory() {
+            isPlaying = false;
+            if (recognition) recognition.stop();
             emojiTxt.innerText = '🏆';
-            emojiTxt.classList.remove('approach-animation');
-            emojiTxt.style.transform = 'scale(1.2)';
-            wordTxt.innerText = '恭喜全破關！';
-            document.getElementById('hint').innerText = '';
-            statusTxt.innerHTML = "<span class='success'>挑戰成功！總分：" + score + " 分！</span>";
-            micBtn.style.display = 'none';
-            transcriptTxt.innerText = '';
+            wordTxt.innerText = '全通關！';
+            subtitleTxt.innerText = '🔥 太厲害了！你完成了英文濾鏡挑戰！';
+            actionBtn.style.display = 'none';
         }
 
-        updateLevelUI();
+        updateCardUI();
     </script>
 </body>
 </html>
