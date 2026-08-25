@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang='zh-Hant-TW'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>英文發音大闖關</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #eef7ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 5px solid #ffcb2e;
+        }
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .emoji-container {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .emoji-display {
+            font-size: 8rem;
+            transition: transform 0.4s ease-out;
+        }
+        .approach-animation {
+            animation: comeCloser 5s linear forwards;
+        }
+        .word-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #2b579a;
+            margin-bottom: 5px;
+        }
+        .hint-text {
+            font-size: 1.1rem;
+            color: #777;
+            margin-bottom: 15px;
+        }
+        .btn-mic {
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 2.2rem;
+            cursor: pointer;
+        }
+        .listening {
+            animation: pulse 1.2s infinite;
+            background-color: #2ed573 !important;
+        }
+        .status-msg {
+            margin-top: 15px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 35px;
+        }
+        .transcript-box {
+            margin-top: 5px;
+            font-size: 1.1rem;
+            color: #666;
+            min-height: 25px;
+        }
+        @keyframes comeCloser {
+            0% { transform: scale(0.2); }
+            100% { transform: scale(1.2); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+        .success { color: #2ed573; }
+        .error { color: #ff4757; }
+        .info { color: #ffa500; }
+    </style>
+</head>
+<body>
+    <div class='game-container'>
+        <div class='header-info'>
+            <span id='level-num'>關卡: 1 / 5</span>
+            <span id="score-num">得分: 0 分</span>
+        </div>
+        <div class='emoji-container'>
+            <div id='emoji' class='emoji-display approach-animation'>🍎</div>
+        </div>
+        <div id='word' class='word-display'>apple</div>
+        <div id='hint' class='hint-text'>請大聲唸出單字，系統每 2 秒自動對答案！</div>
+        <button id='mic-btn' class='btn-mic' onclick='toggleListening()'>🎤</button>
+        <div id='status' class='status-msg info'>點擊麥克風開始闖關</div>
+        <div id='transcript' class='transcript-box'></div>
+    </div>
+    <script>
+        const wordList = [
+            { word: 'apple', emoji: '🍎' },
+            { word: 'banana', emoji: '🍌' },
+            { word: 'lion', emoji: '🦁' },
+            { word: 'tiger', emoji: '🐯' },
+            { word: 'elephant', emoji: '🐘' }
+        ];
+        let currentIdx = 0;
+        let score = 0;
+        let isListening = false;
+        let recognition;
+        let resetTimer = null;   
+        let lastTranscript = ''; 
+
+        const micBtn = document.getElementById('mic-btn');
+        const statusTxt = document.getElementById('status');
+        const transcriptTxt = document.getElementById('transcript');
+        const wordTxt = document.getElementById('word');
+        const emojiTxt = document.getElementById('emoji');
+        const levelTxt = document.getElementById('level-num');
+        const scoreTxt = document.getElementById('score-num');
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                statusTxt.innerHTML = "<span class='error'>瀏覽器不支援語音辨識，請使用 Chrome。</span>";
+                return false;
+            }
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = true; 
+            recognition.continuous = true;     
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.classList.add('listening');
+                statusTxt.innerHTML = "<span class='info'>系統開啟中...請開始發音...</span>";
+                startResetLoop(); 
+            };
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        lastTranscript = event.results[i].transcript;
+                    } else {
+                        interimTranscript += event.results[i].transcript;
+                    }
+                }
+                let currentSpeech = (lastTranscript || interimTranscript).toLowerCase().trim();
+                currentSpeech = currentSpeech.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'');
+                if (currentSpeech) {
+                    transcriptTxt.innerText = '聽到的是: ' + currentSpeech;
+                    lastTranscript = currentSpeech; 
+                }
+            };
+            recognition.onerror = (event) => {
+                if (event.error === 'not-allowed') {
+                    statusTxt.innerHTML = "<span class='error'>請允許瀏覽器使用麥克風權限！</span>";
+                    stopListening();
+                }
+            };
+            recognition.onend = () => {
+                if (isListening) recognition.start();
+            };
+            return true;
+        }
+
+        function toggleListening() {
+            if (!recognition && !initSpeechRecognition()) return;
+            if (isListening) {
+                stopListening();
+                statusTxt.innerHTML = "<span class='info'>語音功能已暫停</span>";
+            } else {
+                lastTranscript = '';
+                recognition.start();
+            }
+        }
+
+        function stopListening() {
+            isListening = false;
+            micBtn.classList.remove('listening');
+            clearInterval(resetTimer);
+            if (recognition) recognition.stop();
+        }
+
+        function startResetLoop() {
+            clearInterval(resetTimer);
+            resetTimer = setInterval(() => {
+                if (!isListening) return;
+                const targetWord = wordList[currentIdx].word.toLowerCase();
+                if (lastTranscript !== '') {
+                    if (lastTranscript.includes(targetWord)) {
+                        handleCorrectAnswer();
+                    } else {
+                        handleWrongAnswer();
+                    }
+                }
+                lastTranscript = ''; 
+            }, 2000);
+        }
+
+        function handleCorrectAnswer() {
+            score += 20;
+            scoreTxt.innerText = '得分: ' + score + ' 分';
+            statusTxt.innerHTML = "<span class='success'>🎉 太棒了！念對了！</span>";
+            emojiTxt.classList.remove('approach-animation');
+            emojiTxt.style.transform = 'scale(1.4)';
+            stopListening();
+            setTimeout(() => {
+                currentIdx++;
+                if (currentIdx < wordList.length) {
+                    updateLevelUI();
+                    recognition.start(); 
+                } else {
+                    displayGameFinished();
+                }
+            }, 1500);
+        }
+
+        function handleWrongAnswer() {
+            statusTxt.innerHTML = "<span class='error'>❌ 發音不對哦！退後再試一次！</span>";
+            emojiTxt.classList.remove('approach-animation');
+            emojiTxt.style.transform = 'scale(0.2)';
+            setTimeout(() => {
+                emojiTxt.style.transform = 'scale(1)'; 
+                emojiTxt.classList.add('approach-animation');
+            }, 50);
+        }
+
+        function updateLevelUI() {
+            levelTxt.innerText = '關卡: ' + (currentIdx + 1) + ' / ' + wordList.length;
+            wordTxt.innerText = wordList[currentIdx].word;
+            emojiTxt.innerText = wordList[currentIdx].emoji;
+            transcriptTxt.innerText = '';
+            emojiTxt.classList.remove('approach-animation');
+            emojiTxt.style.transform = 'scale(1)';
+            setTimeout(() => {
+                emojiTxt.classList.add('approach-animation');
+            }, 50);
+        }
+
+        function displayGameFinished() {
+            emojiTxt.innerText = '🏆';
+            emojiTxt.classList.remove('approach-animation');
+            emojiTxt.style.transform = 'scale(1.2)';
+            wordTxt.innerText = '恭喜全破關！';
+            document.getElementById('hint').innerText = '';
+            statusTxt.innerHTML = "<span class='success'>挑戰成功！總分：" + score + " 分！</span>";
+            micBtn.style.display = 'none';
+            transcriptTxt.innerText = '';
+        }
+
+        updateLevelUI();
+    </script>
+</body>
+</html>
