@@ -163,10 +163,12 @@
         function handleWrongAnswer() {
             playSound('wrong');
             subtitleTxt.innerText = '❌ 失敗！題目退回山頂重新衝過來！';
+            isPlaying = false; 
             challengeCard.classList.remove('card-approach');
             challengeCard.classList.add('card-fallback');
             setTimeout(function() {
                 challengeCard.classList.remove('card-fallback');
+                isPlaying = true; 
                 updateCardUI();
             }, 400);
         }
